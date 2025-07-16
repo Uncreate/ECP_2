@@ -105,17 +105,18 @@ struct MyApp {
     solfex_keys: Vec<String>,
     milling_keys: Vec<String>,
     drilling_keys: Vec<String>,
+    show_local_warning: bool,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
-        let source = DBSource::Local;
+        let source = DBSource::Online; // default to ONLINE
         let items = parse_items(&fetch_db(source));
         let manufacturers = unique(items.iter().map(|t| &t.manufacturer));
         let solf = collect_keys(&items, |t| &t.solfex);
         let mil = collect_keys(&items, |t| &t.milling);
         let dri = collect_keys(&items, |t| &t.drilling);
-        Self { source, items, manufacturers, search: String::new(), manufacturer_filter: None, tool_filter: None, selected: None, active_tab: ActiveTab::Solfex, solfex_keys: solf, milling_keys: mil, drilling_keys: dri }
+        Self { source, items, manufacturers, search: String::new(), manufacturer_filter: None, tool_filter: None, selected: None, active_tab: ActiveTab::Solfex, solfex_keys: solf, milling_keys: mil, drilling_keys: dri, show_local_warning: false }
     }
 }
 
@@ -160,7 +161,7 @@ impl App for MyApp {
                 // DB toggle
                 let prev = self.source;
                 ui.menu_button("Database", |ui| {
-                    ui.radio_value(&mut self.source, DBSource::Local, "Local");
+                    if ui.radio_value(&mut self.source, DBSource::Local, "Local").clicked() { self.show_local_warning = true; }
                     ui.radio_value(&mut self.source, DBSource::Online, "Online");
                 });
                 if prev != self.source { self.reload(); }
@@ -174,6 +175,19 @@ impl App for MyApp {
             });
         });
 
+        // LOCAL warning modal
+        if self.show_local_warning {
+            egui::Window::new("Warning")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.colored_label(egui::Color32::BLACK, "⚠️ You are using the LOCAL database. Data may be outdated. Use only for testing.");
+                    ui.add_space(10.0);
+                    if ui.button("OK").clicked() { self.show_local_warning = false; }
+                });
+        }
+
         // Left panel
         egui::SidePanel::left("left").min_width(220.0).show(ctx, |ui| {
             ui.heading("Tool List"); ui.add_space(4.0);
@@ -181,7 +195,7 @@ impl App for MyApp {
             if let Some(ch) = self.chip() { ui.add_space(4.0); ui.horizontal(|ui| { ui.label(ch); if ui.small_button("✖").clicked() { self.tool_filter = None; } }); }
             ui.add(Separator::default());
             let mut next_sel = self.selected; let mut next_filter = None;
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
                 for (i, it) in self.items.iter().enumerate() {
                     if !self.passes(it) { continue; }
                     let sel = self.selected == Some(i);
@@ -193,6 +207,10 @@ impl App for MyApp {
                     });
                 }
             });
+            ui.add_space(12.0);
+            if ui.button("🔄 Refresh").clicked() {
+                self.reload();
+            }
             self.selected = next_sel; if let Some(f) = next_filter { self.tool_filter = Some(f); }
         });
 
@@ -279,7 +297,7 @@ fn json_table(ui: &mut egui::Ui, section: Option<&Value>, keys: &[String]) {
 
 fn main() -> eframe::Result<()> {
     eframe::run_native(
-        "Tool Control Panel",
+        "Essai Control Panel v2",
         NativeOptions::default(),
         Box::new(|_| Ok::<Box<dyn App>, _>(Box::new(MyApp::default()))),
     )

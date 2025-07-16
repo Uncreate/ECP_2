@@ -1,6 +1,6 @@
 [package]
-name = "simple_gui"
-version = "0.1.0"
+name = "Essai_Control_Panel_v2"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
