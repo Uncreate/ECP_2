@@ -1,0 +1,18 @@
+# Compiled files
+/target/
+**/*.rs.bk
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+
+# Cargo.lock is optional to include for libraries, include for binaries
+Cargo.lock
